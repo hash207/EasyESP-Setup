@@ -1,7 +1,7 @@
 from time import sleep
 from pywifi import PyWiFi
 from customtkinter import *
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 
 esp32_code = lambda ssid, pwd, topic: f"""#include <WiFi.h>
 #include <PubSubClient.h>
@@ -267,17 +267,35 @@ class main_frame(CTkFrame):
         self.chk = CTkCheckBox(self, text="ESP8266", onvalue=True, offvalue=False)
         self.chk.grid(row=3, column=2, sticky="ew")
 
-    def submit_action(self):
-        print(self.chk.get())
-        save_dir = filedialog.askdirectory(title="Please select a directory")
-        print(f"File save at: {save_dir}")
-        
-        os.mkdir(f"{save_dir}/{self.title.get()}")
-        
-        with open(f"{save_dir}/{self.title.get()}/{self.title.get()}.ino", "wt") as f:
-            _code = esp8266_code(self.ssid.get(), self.pwd.get(), self.topic.get()) if self.chk.get() else esp32_code(self.ssid.get(), self.pwd.get(), self.topic.get())
-            f.write(_code.replace("*(", "{").replace(")*", "}").replace("/n", "\\n"))
+    def is_empty(self):
+        required_entries = {
+                    "Project's Name": self.title,
+                    "WiFi SSID": self.ssid,
+                    "WiFi Password": self.pwd,
+                    "MQTT Topic": self.topic
+                }
+        empty_fields = [name for name, entry in required_entries.items() if not entry.get()]
+        return empty_fields
 
+    def submit_action(self):
+        print(self.is_empty())
+        test = []
+        if not self.is_empty():
+            test = filedialog.askdirectory(title="Please select a directory")
+            save_dir = test if test else None
+            if save_dir:
+                print(f"File save at: {save_dir}")
+                
+                os.mkdir(f"{save_dir}/{self.title.get()}")
+                
+                with open(f"{save_dir}/{self.title.get()}/{self.title.get()}.ino", "wt") as f:
+                    _code = esp8266_code(self.ssid.get(), self.pwd.get(), self.topic.get()) if self.chk.get() else esp32_code(self.ssid.get(), self.pwd.get(), self.topic.get())
+                    f.write(_code.replace("*(", "{").replace(")*", "}").replace("/n", "\\n"))
+            else:
+                messagebox.showerror("Error", "No directory selected. Please try again.")
+        else:
+            messagebox.showerror("Error: Empty Fields", f"The following fields are empty: {', '.join(self.is_empty())}")
+        
     def wifi_info(self):
             win = CTkToplevel(self)
             win.title("WiFi List")
@@ -325,11 +343,18 @@ class main_app(CTk):
         super().__init__()
         self.title("ESP32/ESP8266 - Arduino MQTT Setup")
         self.geometry("800x400")
+        self.protocol("WM_DELETE_WINDOW", self.EXIT)
         
         frame = main_frame(self)
         frame.pack()        
         
         self.mainloop()
+
+    def EXIT(self):
+        res = messagebox.askyesno('EasyESP-Setup', 'Are you sure you want to leave?')
+        if res == 1:
+            self.destroy()
+        return
 
 if __name__ == "__main__":
     main_app()
