@@ -1,7 +1,12 @@
+import esptool
 from time import sleep
 from pywifi import PyWiFi
 from customtkinter import *
+from subprocess import run
+import serial.tools.list_ports
 from tkinter import filedialog, messagebox
+
+port = [port.device for port in serial.tools.list_ports.comports()][0]
 
 esp32_code = lambda ssid, pwd, topic: f"""#include <WiFi.h>
 #include <PubSubClient.h>
@@ -130,7 +135,7 @@ PubSubClient client(espClient);
 
 // RX = D1 (GPIO 5) 
 // TX = D2 (GPIO 4)
-SoftwareSerial arduino(D1, D2); 
+SoftwareSerial arduino(D2, D3); // RX, TX
 
 void setup_wifi() *(
 
@@ -228,6 +233,54 @@ void loop() *(
   reciev();
 )*"""
 
+def flash_esp_direct(port, path, is_esp8266=False):
+    if not is_esp8266:
+        # compile the sketch first (you can replace this with your actual sketch path)
+        run(["arduino-cli", "compile", "-b", "esp32:esp32:esp32c3", "-e", path])
+        
+        # First, erase the flash to ensure a clean slate
+        command_args = [
+            "--chip", "esp32c3",
+            "--port", port,
+            "erase-flash"
+        ]
+        print(f"Erasing flash on {port}...")
+        esptool.main(command_args)
+        
+        # Construct the arguments just like the command line, but omit "esptool.py"
+        command_args = [
+            "--chip", "esp32c3",
+            "--port", port,
+            "--baud", "460800",
+            "write-flash",
+            "0x0",
+            path + r"\build\esp32.esp32.esp32c3\Test.ino.merged.bin"
+        ]
+    else:
+        # For ESP8266, the process is similar but with different parameters
+        run(["arduino-cli", "compile", "-b", "esp8266:esp8266:nodemcuv2", "-e", path])
+        
+        command_args = [
+            "--chip", "esp8266",
+            "--port", port,
+            "--baud", "115200",
+            "write-flash",
+            "--flash-mode", "dio",
+            "0x00000",
+            path + r"\build\esp8266.esp8266.nodemcuv2\Test.ino.bin"
+        ]
+    
+    print(f"Initializing esptool on {port}...")
+    
+    try:
+        # Pass the arguments directly to esptool's main entry point
+        esptool.main(command_args)
+        print("\n✅ Flashing completed successfully!")
+        
+    except Exception as e:
+        # esptool will raise exceptions if the board isn't found or communication fails
+        print(f"\n❌ Flashing failed: {e}")
+
 def get_ssids():
     iface = PyWiFi().interfaces()[0] # Selects the first wireless adapter
 
@@ -244,7 +297,7 @@ class main_frame(CTkFrame):
     def __init__(self ,master):
         super().__init__(master, height=400, width=800)
         self.grid_columnconfigure((0, 1, 2, 3), weight=1)
-        self.grid_rowconfigure((0, 1, 2, 3), weight=1)
+        self.grid_rowconfigure((0, 1, 2, 3, 4), weight=1)
         
         label1 = CTkLabel(self, text="Project's Name: ", font=("Arial", 30))
         label1.grid(row=0, column=0, sticky="ew")
@@ -264,6 +317,8 @@ class main_frame(CTkFrame):
         self.topic.grid(row=2, column=1, padx=5, columnspan=3, sticky="ew")
         btn = CTkButton(self, text="Submit", command=self.submit_action)
         btn.grid(row=3, column=1, sticky="ew")
+        upload = CTkButton(self, text="Flash to ESP", command= self.flash_action)
+        upload.grid(row=4, column=1, sticky="ew")
         self.chk = CTkCheckBox(self, text="ESP8266", onvalue=True, offvalue=False)
         self.chk.grid(row=3, column=2, sticky="ew")
 
@@ -279,10 +334,9 @@ class main_frame(CTkFrame):
 
     def submit_action(self):
         print(self.is_empty())
-        test = []
         if not self.is_empty():
-            test = filedialog.askdirectory(title="Please select a directory")
-            save_dir = test if test else None
+            dir = filedialog.askdirectory(title="Please select a directory")
+            save_dir = dir if dir else None
             if save_dir:
                 print(f"File save at: {save_dir}")
                 
@@ -291,11 +345,20 @@ class main_frame(CTkFrame):
                 with open(f"{save_dir}/{self.title.get()}/{self.title.get()}.ino", "wt") as f:
                     _code = esp8266_code(self.ssid.get(), self.pwd.get(), self.topic.get()) if self.chk.get() else esp32_code(self.ssid.get(), self.pwd.get(), self.topic.get())
                     f.write(_code.replace("*(", "{").replace(")*", "}").replace("/n", "\\n"))
+                return save_dir
             else:
                 messagebox.showerror("Error", "No directory selected. Please try again.")
         else:
             messagebox.showerror("Error: Empty Fields", f"The following fields are empty: {', '.join(self.is_empty())}")
+
+    def flash_action(self):
+        skitch_path = str(self.submit_action()) + "/" + self.title.get()  # Ensure the sketch is generated before flashing
+        if skitch_path:
+            flash_esp_direct(port, skitch_path, is_esp8266=self.chk.get())
+        else:
+            messagebox.showerror("Error", "Sketch generation failed. Please fix the errors and try again.")
         
+
     def wifi_info(self):
             win = CTkToplevel(self)
             win.title("WiFi List")
