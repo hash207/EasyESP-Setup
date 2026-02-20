@@ -6,8 +6,6 @@ from subprocess import run
 import serial.tools.list_ports
 from tkinter import filedialog, messagebox
 
-port = [port.device for port in serial.tools.list_ports.comports()][0]
-
 esp32_code = lambda ssid, pwd, topic: f"""#include <WiFi.h>
 #include <PubSubClient.h>
 
@@ -352,12 +350,18 @@ class main_frame(CTkFrame):
             messagebox.showerror("Error: Empty Fields", f"The following fields are empty: {', '.join(self.is_empty())}")
 
     def flash_action(self):
-        skitch_path = str(self.submit_action()) + "/" + self.title.get()  # Ensure the sketch is generated before flashing
-        if skitch_path:
-            flash_esp_direct(port, skitch_path, is_esp8266=self.chk.get())
+        ports = [port.device for port in serial.tools.list_ports.comports()]
+        if len(ports) == 0:
+            messagebox.showerror("Error", "No serial ports found. Please connect your ESP device and try again.")
+        elif len(ports) > 1:
+            messagebox.showerror("Error", f"Multiple serial ports found: {', '.join(ports)}. Please ensure only one ESP device is connected and try again.")
         else:
-            messagebox.showerror("Error", "Sketch generation failed. Please fix the errors and try again.")
-        
+            port = ports[0]
+            skitch_path = str(self.submit_action()) + "/" + self.title.get()  # Ensure the sketch is generated before flashing
+            if skitch_path:
+                flash_esp_direct(port, skitch_path, is_esp8266=self.chk.get())
+            else:
+                messagebox.showerror("Error", "Sketch generation failed. Please fix the errors and try again.")
 
     def wifi_info(self):
             win = CTkToplevel(self)
