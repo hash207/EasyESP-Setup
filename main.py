@@ -231,7 +231,7 @@ void loop() *(
   reciev();
 )*"""
 
-def flash_esp_direct(port, path, is_esp8266=False):
+def flash_esp_direct(port, path, title, is_esp8266=False):
     if not is_esp8266:
         # compile the sketch first (you can replace this with your actual sketch path)
         run(["arduino-cli", "compile", "-b", "esp32:esp32:esp32c3", "-e", path])
@@ -252,7 +252,7 @@ def flash_esp_direct(port, path, is_esp8266=False):
             "--baud", "460800",
             "write-flash",
             "0x0",
-            path + r"\build\esp32.esp32.esp32c3\Test.ino.merged.bin"
+            path + r"\build\esp32.esp32.esp32c3\\" + title + r".ino.merged.bin"
         ]
     else:
         # For ESP8266, the process is similar but with different parameters
@@ -265,7 +265,7 @@ def flash_esp_direct(port, path, is_esp8266=False):
             "write-flash",
             "--flash-mode", "dio",
             "0x00000",
-            path + r"\build\esp8266.esp8266.nodemcuv2\Test.ino.bin"
+            path + r"\build\esp8266.esp8266.nodemcuv2\\" + title + r".ino.bin"
         ]
     
     print(f"Initializing esptool on {port}...")
@@ -359,7 +359,7 @@ class main_frame(CTkFrame):
             port = ports[0]
             skitch_path = str(self.submit_action()) + "/" + self.title.get()  # Ensure the sketch is generated before flashing
             if skitch_path:
-                flash_esp_direct(port, skitch_path, is_esp8266=self.chk.get())
+                flash_esp_direct(port, skitch_path, self.title.get(), is_esp8266=self.chk.get())
             else:
                 messagebox.showerror("Error", "Sketch generation failed. Please fix the errors and try again.")
 
