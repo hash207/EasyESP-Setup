@@ -1,6 +1,6 @@
 import esptool
 from time import sleep
-from pywifi import PyWiFi
+from pywifi import PyWiFi, const
 from customtkinter import *
 from subprocess import run
 import serial.tools.list_ports
@@ -371,46 +371,54 @@ class main_frame(CTkFrame):
                 messagebox.showerror("Error", "Sketch generation failed. Please fix the errors and try again.")
 
     def wifi_info(self):
-            win = CTkToplevel(self)
-            win.title("WiFi List")
-            win.attributes("-topmost", True)
+        wifi = PyWiFi()
+        
+        # 1. Crash Prevention: Check if the computer even has a Wi-Fi adapter
+        if not wifi.interfaces():
+            messagebox.showerror("Hardware Error", "No Wi-Fi adapter found on this device!")
+            return
             
-            # 1. Show the loading label immediately
-            loading_label = CTkLabel(win, text="Scanning for networks...\nPlease wait 5 seconds.", font=("Arial", 16))
-            loading_label.pack(padx=40, pady=40)
+        iface = wifi.interfaces()[0]
+
+        # 2. Check the connection status
+        # const.IFACE_CONNECTED means the adapter is currently linked to a router
+        if iface.status() != const.IFACE_CONNECTED:
             
-            def on_closing(selected_ssid):
-                # Print to console for debugging
-                print(f"Selected SSID: {selected_ssid}")
-                
-                self.ssid.delete(0, END)
-                self.ssid.insert(0, selected_ssid)
-                
-                win.destroy()
-                
-            def fetch_and_display(iface):
-                # 4. This runs 5 seconds later to grab the results
-                results = iface.scan_results()
-                
-                # Filter out empty SSIDs (PyWiFi sometimes catches hidden networks)
-                ssids = list(set([network.ssid for network in results if network.ssid]))
-                
-                # Remove the loading label
-                loading_label.destroy()
-                
-                # 5. Display the buttons
-                for ssid_name in ssids:
-                    # FIXED: Added s=ssid_name to avoid the lambda late-binding bug
-                    btn = CTkButton(win, text=ssid_name, command=lambda s=ssid_name: on_closing(s))
-                    btn.pack(padx=10, pady=5)
-                    
-            # 2. Initialize PyWiFi and trigger the scan
-            wifi = PyWiFi()
-            iface = wifi.interfaces()[0]
-            iface.scan()
+            # Ask the user if they still want to scan using a Yes/No pop-up
+            msg = "You are not currently connected to a Wi-Fi network.\n\nDo you still want to scan for available networks?"
+            should_scan = messagebox.askyesno("Not Connected", msg)
             
-            # 3. Use .after() to wait 5 seconds (5000 milliseconds) WITHOUT blocking the GUI
-            win.after(5000, lambda: fetch_and_display(iface))
+            # If they click 'No', exit the function early
+            if not should_scan:
+                return 
+
+        # 3. If connected (or if they clicked 'Yes'), proceed with creating the window
+        win = CTkToplevel(self)
+        win.title("WiFi List")
+        win.attributes("-topmost", True)
+        
+        # Show the loading label immediately
+        loading_label = CTkLabel(win, text="Scanning for networks...\nPlease wait 5 seconds.", font=("Arial", 16))
+        loading_label.pack(padx=40, pady=40)
+        
+        def on_closing(selected_ssid):
+            self.ssid.delete(0, END)
+            self.ssid.insert(0, selected_ssid)
+            win.destroy()
+            
+        def fetch_and_display(interface):
+            results = interface.scan_results()
+            ssids = list(set([network.ssid for network in results if network.ssid]))
+            
+            loading_label.destroy()
+            
+            for ssid_name in ssids:
+                btn = CTkButton(win, text=ssid_name, command=lambda s=ssid_name: on_closing(s))
+                btn.pack(padx=10, pady=5)
+                
+        # Trigger the scan and set the 5-second timer
+        iface.scan()
+        win.after(5000, lambda: fetch_and_display(iface))
 
 class main_app(CTk):
     def __init__(self):
