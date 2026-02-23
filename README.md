@@ -28,12 +28,12 @@ Installation & Usage
 1. Clone the repository:
 
 ```
-git clone [https://github.com/yourusername/ESP-MQTT-Configurator.git](https://github.com/yourusername/ESP-MQTT-Configurator.git)
+git clone [https://github.com/hash207/EasyESP-Setup.git](https://github.com/hash207/EasyESP-Setup.git)
 ```
 
 2. Navigate to the project directory:
 ```
-cd ESP-MQTT-Configurator
+cd EasyESP-Setup
 ```
 
 3. Run the application:
