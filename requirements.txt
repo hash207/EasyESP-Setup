@@ -1,4 +1,5 @@
-serial
+pyserial
 pywifi
 esptool
+comtypes
 customtkinter
