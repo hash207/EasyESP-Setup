@@ -1,0 +1,4 @@
+serial
+pywifi
+esptool
+customtkinter
