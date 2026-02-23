@@ -6,7 +6,8 @@ from subprocess import run
 import serial.tools.list_ports
 from tkinter import filedialog, messagebox
 
-esp32_code = lambda ssid, pwd, topic: f"""#include <WiFi.h>
+def esp32_code(ssid, pwd, topic):
+    return f"""#include <WiFi.h>
 #include <PubSubClient.h>
 
 // Update these with values suitable for your network.
@@ -27,7 +28,7 @@ int value = 0;
 float lastValue = 0.0;
 String data;
 
-void setup_wifi() *(
+void setup_wifi() {{
 
   delay(10);
   // We start by connecting to a WiFi network
@@ -38,11 +39,11 @@ void setup_wifi() *(
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED) *(
+  while (WiFi.status() != WL_CONNECTED) {{
     delay(500);
     Serial.print(".");
     digitalWrite(WiFi_LED,  !digitalRead(1));
-  )*
+  }}
 
   randomSeed(micros());
 
@@ -51,51 +52,51 @@ void setup_wifi() *(
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
   digitalWrite(WiFi_LED,  1);
-)*
+}}
 
-void callback(char* topic, byte* payload, unsigned int length) *(
+void callback(char* topic, byte* payload, unsigned int length) {{
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
-  for (int i = 0; i < length; i++) *(
+  for (int i = 0; i < length; i++) {{
     Serial.print((char)payload[i]);
-  )*
+  }}
   Serial.println();
-)*
+}}
 
-void reconnect() *(
+void reconnect() {{
   // Loop until we're reconnected
-  while (!client.connected()) *(
+  while (!client.connected()) {{
     Serial.print("Attempting MQTT connection...");
     // Create a random client ID
     String clientId = "ESP8266Client-";
     clientId += String(random(0xffff), HEX);
     // Attempt to connect
     digitalWrite(MQTT_LED, !digitalRead(0));
-    if (client.connect(clientId.c_str())) *(
+    if (client.connect(clientId.c_str())) {{
       Serial.println("connected");
       client.subscribe("HashESP1");
       digitalWrite(MQTT_LED, 1);
-    )* else *(
+    }} else {{
       digitalWrite(MQTT_LED, 0);
       Serial.print("failed, rc=");
       Serial.print(client.state());
       Serial.println(" try again in 2 seconds");
       // Wait 2 seconds before retrying
       delay(2000);
-    )*
-  )*
-)*
+    }}
+  }}
+}}
 
-void sendData()  *(
-  if (Serial.available())*(
+void sendData()  {{
+  if (Serial.available()){{
     data = Serial.readStringUntil('/');
     Serial.println(data);
     client.publish("{topic}", data.c_str());
-  )*
-)*
+  }}
+}}
 
-void setup() *(
+void setup() {{
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
   pinMode(0, OUTPUT);
   pinMode(1, OUTPUT);
@@ -103,21 +104,22 @@ void setup() *(
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
-)*
+}}
 
-void loop() *(
+void loop() {{
 
-  if (!client.connected()) *(
+  if (!client.connected()) {{
     reconnect();
-  )*
+  }}
   client.loop();
 
   sendData();
 
-)*
+}}
 """
 
-esp8266_code = lambda ssid, pwd, topic: f"""#include <ESP8266WiFi.h>
+def esp8266_code(ssid, pwd, topic): 
+    return f"""#include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <SoftwareSerial.h>
 
@@ -135,7 +137,7 @@ PubSubClient client(espClient);
 // TX = D2 (GPIO 4)
 SoftwareSerial arduino(D2, D3); // RX, TX
 
-void setup_wifi() *(
+void setup_wifi() {{
 
   delay(10);
   // We start by connecting to a WiFi network
@@ -146,11 +148,11 @@ void setup_wifi() *(
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED) *(
+  while (WiFi.status() != WL_CONNECTED) {{
     delay(500);
     Serial.print(".");
     digitalWrite(WiFi_LED,  !digitalRead(1));
-  )*
+  }}
 
   randomSeed(micros());
 
@@ -159,45 +161,45 @@ void setup_wifi() *(
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
   digitalWrite(WiFi_LED,  1);
-)*
+}}
 
-void callback(char* topic, byte* payload, unsigned int length) *(
+void callback(char* topic, byte* payload, unsigned int length) {{
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
-  for (int i = 0; i < length; i++) *(
+  for (int i = 0; i < length; i++) {{
     Serial.print((char)payload[i]);
-  )*
+  }}
   Serial.println();
-)*
+}}
 
-void reconnect() *(
+void reconnect() {{
   // Loop until we're reconnected
-  while (!client.connected()) *(
+  while (!client.connected()) {{
     Serial.print("Attempting MQTT connection...");
     // Create a random client ID
     String clientId = "ESP8266Client-";
     clientId += String(random(0xffff), HEX);
     // Attempt to connect
     digitalWrite(MQTT_LED, !digitalRead(0));
-    if (client.connect(clientId.c_str())) *(
+    if (client.connect(clientId.c_str())) {{
       Serial.println("connected");
       client.subscribe("HashESP1");
       digitalWrite(MQTT_LED, 1);
-    )* else *(
+    }} else {{
       digitalWrite(MQTT_LED, 0);
       Serial.print("failed, rc=");
       Serial.print(client.state());
       Serial.println(" try again in 2 seconds");
       // Wait 2 seconds before retrying
       delay(2000);
-    )*
-  )*
-)*
+    }}
+  }}
+}}
 
-String reciev()*(
+String reciev(){{
   String incomingMessage;
-  if (arduino.available() > 0) *(
+  if (arduino.available() > 0) {{
     
     // Read the incoming data until the newline character '/n'
     // This captures the whole string sent by nodemcu.println()
@@ -205,11 +207,11 @@ String reciev()*(
     Serial.println(incomingMessage);
     client.publish("{topic}", incomingMessage.c_str());
     
-  )*
+  }}
   return incomingMessage;
-)*
+}}
 
-void setup() *(
+void setup() {{
   // Initialize Serial Monitor (to view results on PC)
   Serial.begin(9600);
   
@@ -220,16 +222,16 @@ void setup() *(
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
-)*
+}}
 
-void loop() *(
-  if (!client.connected()) *(
+void loop() {{
+  if (!client.connected()) {{
     reconnect();
-  )*
+  }}
   client.loop();
 
   reciev();
-)*"""
+}}"""
 
 def flash_esp_direct(port, path, title, is_esp8266=False):
     if not is_esp8266:
@@ -338,11 +340,16 @@ class main_frame(CTkFrame):
             if save_dir:
                 print(f"File save at: {save_dir}")
                 
-                os.mkdir(f"{save_dir}/{self.title.get()}")
-                
+                try:
+                    os.mkdir(f"{save_dir}/{self.title.get()}")
+                except FileExistsError:
+                    result = messagebox.askyesno("Error", f"A folder named '{self.title.get()}' already exists in the selected directory. Do you want to overwrite it?")
+                    if not result:
+                        return
+                    
                 with open(f"{save_dir}/{self.title.get()}/{self.title.get()}.ino", "wt") as f:
                     _code = esp8266_code(self.ssid.get(), self.pwd.get(), self.topic.get()) if self.chk.get() else esp32_code(self.ssid.get(), self.pwd.get(), self.topic.get())
-                    f.write(_code.replace("*(", "{").replace(")*", "}").replace("/n", "\\n"))
+                    f.write(_code.replace("/n", "\\n"))
                 return save_dir
             else:
                 messagebox.showerror("Error", "No directory selected. Please try again.")
