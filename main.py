@@ -42,7 +42,7 @@ void setup_wifi() {{
   while (WiFi.status() != WL_CONNECTED) {{
     delay(500);
     Serial.print(".");
-    digitalWrite(WiFi_LED,  !digitalRead(1));
+    digitalWrite(WiFi_LED,  !digitalRead(WiFi_LED));
   }}
 
   randomSeed(micros());
@@ -58,10 +58,14 @@ void callback(char* topic, byte* payload, unsigned int length) {{
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
+
+  String message = "";
   for (int i = 0; i < length; i++) {{
-    Serial.print((char)payload[i]);
+    message += (char)payload[i];
   }}
-  Serial.println();
+
+  Serial.println(message);
+  arduino.println(message);
 }}
 
 void reconnect() {{
@@ -151,7 +155,7 @@ void setup_wifi() {{
   while (WiFi.status() != WL_CONNECTED) {{
     delay(500);
     Serial.print(".");
-    digitalWrite(WiFi_LED,  !digitalRead(1));
+    digitalWrite(WiFi_LED,  !digitalRead(WiFi_LED));
   }}
 
   randomSeed(micros());
@@ -167,10 +171,14 @@ void callback(char* topic, byte* payload, unsigned int length) {{
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
+
+  String message = "";
   for (int i = 0; i < length; i++) {{
-    Serial.print((char)payload[i]);
+    message += (char)payload[i];
   }}
-  Serial.println();
+
+  Serial.println(message);
+  arduino.println(message);
 }}
 
 void reconnect() {{
