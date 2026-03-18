@@ -6,7 +6,7 @@ from subprocess import run
 import serial.tools.list_ports
 from tkinter import filedialog, messagebox
 
-def esp32_code(ssid, pwd, topic):
+def esp32_code(ssid, pwd, pub_topic, sub_topic):
     return f"""#include <WiFi.h>
 #include <PubSubClient.h>
 
@@ -18,6 +18,11 @@ const char* mqtt_server = "broker.emqx.io";
 const int mqtt_port = 1883;
 const int MQTT_LED = 0;
 const int WiFi_LED = 1;
+
+// Choose your pins (Example: RX=20, TX=21)
+
+#define RX_PIN 20
+#define TX_PIN 21
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -65,7 +70,7 @@ void callback(char* topic, byte* payload, unsigned int length) {{
   }}
 
   Serial.println(message);
-  arduino.println(message);
+  Serial1.println(message);
 }}
 
 void reconnect() {{
@@ -79,7 +84,7 @@ void reconnect() {{
     digitalWrite(MQTT_LED, !digitalRead(0));
     if (client.connect(clientId.c_str())) {{
       Serial.println("connected");
-      client.subscribe("HashESP1");
+      client.subscribe("{sub_topic}");
       digitalWrite(MQTT_LED, 1);
     }} else {{
       digitalWrite(MQTT_LED, 0);
@@ -96,7 +101,7 @@ void sendData()  {{
   if (Serial.available()){{
     data = Serial.readStringUntil('/');
     Serial.println(data);
-    client.publish("{topic}", data.c_str());
+    client.publish("{pub_topic}", data.c_str());
   }}
 }}
 
@@ -108,6 +113,9 @@ void setup() {{
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
+
+  // This initializes the hardware UART1 with your chosen pins
+  Serial1.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);
 }}
 
 void loop() {{
@@ -122,7 +130,7 @@ void loop() {{
 }}
 """
 
-def esp8266_code(ssid, pwd, topic): 
+def esp8266_code(ssid, pwd, pub_topic, sub_topic): 
     return f"""#include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <SoftwareSerial.h>
@@ -192,7 +200,7 @@ void reconnect() {{
     digitalWrite(MQTT_LED, !digitalRead(0));
     if (client.connect(clientId.c_str())) {{
       Serial.println("connected");
-      client.subscribe("HashESP1");
+      client.subscribe("{sub_topic}");
       digitalWrite(MQTT_LED, 1);
     }} else {{
       digitalWrite(MQTT_LED, 0);
@@ -213,7 +221,7 @@ String reciev(){{
     // This captures the whole string sent by nodemcu.println()
     incomingMessage += arduino.readStringUntil('/n');
     Serial.println(incomingMessage);
-    client.publish("{topic}", incomingMessage.c_str());
+    client.publish("{pub_topic}", incomingMessage.c_str());
     
   }}
   return incomingMessage;
@@ -305,7 +313,7 @@ class main_frame(CTkFrame):
     def __init__(self ,master):
         super().__init__(master, height=400, width=800)
         self.grid_columnconfigure((0, 1, 2, 3), weight=1)
-        self.grid_rowconfigure((0, 1, 2, 3, 4), weight=1)
+        self.grid_rowconfigure((0, 1, 2, 3, 4, 5), weight=1)
         
         label1 = CTkLabel(self, text="Project's Name: ", font=("Arial", 30))
         label1.grid(row=0, column=0, sticky="ew")
@@ -321,21 +329,26 @@ class main_frame(CTkFrame):
         self.pwd.grid(row=1, column=3, padx=5, sticky="ew")
         label3 = CTkLabel(self, text="MQTT topic to publish: ", font=("Arial", 24))
         label3.grid(row=2, column=0, sticky="ew")
-        self.topic = CTkEntry(self, placeholder_text="MQTT Topic")
-        self.topic.grid(row=2, column=1, padx=5, columnspan=3, sticky="ew")
+        self.pub_topic = CTkEntry(self, placeholder_text="MQTT Publish Topic")
+        self.pub_topic.grid(row=2, column=1, padx=5, columnspan=3, sticky="ew")
+        label4 = CTkLabel(self, text="MQTT topic to subscribe: ", font=("Arial", 24))
+        label4.grid(row=3, column=0, sticky="ew")
+        self.sub_topic = CTkEntry(self, placeholder_text="MQTT Subscribe Topic")
+        self.sub_topic.grid(row=3, column=1, padx=5, columnspan=3, sticky="ew")
         btn = CTkButton(self, text="Submit", command=self.submit_action)
-        btn.grid(row=3, column=1, sticky="ew")
+        btn.grid(row=4, column=1, sticky="ew")
         upload = CTkButton(self, text="Flash to ESP", command= self.flash_action)
-        upload.grid(row=4, column=1, sticky="ew")
+        upload.grid(row=5, column=1, sticky="ew")
         self.chk = CTkCheckBox(self, text="ESP8266", onvalue=True, offvalue=False)
-        self.chk.grid(row=3, column=2, sticky="ew")
+        self.chk.grid(row=4, column=2, sticky="ew")
 
     def is_empty(self):
         required_entries = {
                     "Project's Name": self.title,
                     "WiFi SSID": self.ssid,
                     "WiFi Password": self.pwd,
-                    "MQTT Topic": self.topic
+                    "MQTT Publish Topic": self.pub_topic,
+                    "MQTT Subscribe Topis": self.sub_topic
                 }
         empty_fields = [name for name, entry in required_entries.items() if not entry.get()]
         return empty_fields
@@ -356,7 +369,7 @@ class main_frame(CTkFrame):
                         return
                     
                 with open(f"{save_dir}/{self.title.get()}/{self.title.get()}.ino", "wt") as f:
-                    _code = esp8266_code(self.ssid.get(), self.pwd.get(), self.topic.get()) if self.chk.get() else esp32_code(self.ssid.get(), self.pwd.get(), self.topic.get())
+                    _code = esp8266_code(self.ssid.get(), self.pwd.get(), self.pub_topic.get(), self.sub_topic.get()) if self.chk.get() else esp32_code(self.ssid.get(), self.pwd.get(), self.pub_topic.get(), self.sub_topic.get())
                     f.write(_code.replace("/n", "\\n"))
                 return save_dir
             else:
