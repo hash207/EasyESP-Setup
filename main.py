@@ -107,8 +107,8 @@ void sendData()  {{
 
 void setup() {{
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
-  pinMode(0, OUTPUT);
-  pinMode(1, OUTPUT);
+  pinMode(WiFi_LED, OUTPUT);
+  pinMode(MQTT_LED, OUTPUT);
   Serial.begin(9600);
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
@@ -145,8 +145,6 @@ const int WiFi_LED = D1;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-// RX = D1 (GPIO 5) 
-// TX = D2 (GPIO 4)
 SoftwareSerial arduino(D2, D3); // RX, TX
 
 void setup_wifi() {{
@@ -233,7 +231,10 @@ void setup() {{
   
   // Initialize communication with Arduino
   arduino.begin(9600);
-  
+
+  pinMode(WiFi_LED, OUTPUT);
+  pinMode(MQTT_LED, OUTPUT);
+
   Serial.println("NodeMCU ready to receive strings...");
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
